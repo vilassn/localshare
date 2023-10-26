@@ -12,6 +12,7 @@ import android.widget.TextView;
 import android.view.MotionEvent;
 import android.view.View;
 
+import com.wavesignal.localshare.model.ChatUser;
 import com.wavesignal.localshare.model.UpdateListener;
 
 import java.io.FileOutputStream;

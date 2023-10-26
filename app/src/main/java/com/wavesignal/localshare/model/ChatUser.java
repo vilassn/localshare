@@ -1,9 +1,4 @@
-package com.wavesignal.localshare;
-
-import com.wavesignal.localshare.model.Client;
-import com.wavesignal.localshare.model.ServerScan;
-import com.wavesignal.localshare.model.Server;
-import com.wavesignal.localshare.model.UpdateListener;
+package com.wavesignal.localshare.model;
 
 import java.util.Scanner;
 

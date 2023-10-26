@@ -8,6 +8,7 @@ import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class ServerScan {
     public String getServerIP() {
@@ -22,6 +23,7 @@ public class ServerScan {
                 String[] parts = address.split("\\.");
                 if (parts.length >= 3) {
                     subnet = parts[0] + "." + parts[1] + "." + parts[2];
+
                     System.out.println("Subnet: " + subnet);
                 } else {
                     System.out.println("Invalid IP address format");
@@ -30,26 +32,71 @@ public class ServerScan {
             }
         }
 
-        for (int j = 0; j < 256; j++) {
-            String host = subnet + "." + j;
-            //System.out.println("Scanning " + host);
+        AtomicReference<String> finalHost = new AtomicReference<>();
+
+        int nThreads = 256; // to search for 256 sub ip addresses
+        // Discover server using multiple threads for different ip address
+        List<Thread> workers = new ArrayList<>();
+        for (int iw = 0; iw < nThreads; iw++) {
+            final int ith = iw;  // Capture iw in a final variable for use in the lambda
+            final String finalSubnet = subnet;
+            Thread thread = new Thread(() -> {
+                // Inside the thread, ith will have the same value as iw (first value is 0)
+               System.out.println("Thread " + ith + " started.");
+
+                String host = finalSubnet + "." + ith;
+                //System.out.println("Scanning " + host);
+                try {
+                    InetSocketAddress socketAddress = new InetSocketAddress(host, port);
+                    Socket socket = new Socket();
+                    socket.connect(socketAddress, 1000); // Adjust the timeout as needed
+
+                    // If the connection was successful, the port is open
+                    System.out.println("Host: " + host + " Port " + port + " is open");
+                    socket.close();
+
+                    finalHost.set(host);
+                } catch (Exception e) {
+                    // e.printStackTrace();
+                    // Port is closed or host is not reachable
+                }
+            });
+
+            workers.add(thread);
+            thread.start();
+        }
+
+        // Wait for all threads to finish
+        for (Thread worker : workers) {
             try {
-                InetSocketAddress socketAddress = new InetSocketAddress(host, port);
-                Socket socket = new Socket();
-                socket.connect(socketAddress, 100); // Adjust the timeout as needed
-
-                // If the connection was successful, the port is open
-                System.out.println("Host: " + host + " Port " + port + " is open");
-                socket.close();
-
-                return host;
-            } catch (Exception e) {
-                // e.printStackTrace();
-                // Port is closed or host is not reachable
+                worker.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
 
-        return null;
+        return finalHost.get();
+
+//        for (int j = 0; j < 256; j++) {
+//            String host = subnet + "." + j;
+//            //System.out.println("Scanning " + host);
+//            try {
+//                InetSocketAddress socketAddress = new InetSocketAddress(host, port);
+//                Socket socket = new Socket();
+//                socket.connect(socketAddress, 100); // Adjust the timeout as needed
+//
+//                // If the connection was successful, the port is open
+//                System.out.println("Host: " + host + " Port " + port + " is open");
+//                socket.close();
+//
+//                return host;
+//            } catch (Exception e) {
+//                // e.printStackTrace();
+//                // Port is closed or host is not reachable
+//            }
+//        }
+
+        //return null;
     }
 
     public List<String> getHostAddresses() {
